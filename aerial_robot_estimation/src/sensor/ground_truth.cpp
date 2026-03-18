@@ -47,6 +47,10 @@ namespace sensor_plugin {
                        EstimatorPtr estimator,
                        string sensor_name, int index) {
 
+    // First: force to set the estimation mode as 2 (GroundTruth Mode)
+    std::string prefix = "estimation.fusion.sensor_plugin.ground_truth";
+    node->set_parameter(rclcpp::Parameter(prefix + ".estimate_mode", 2));
+
     SensorBase::initialize(node, robot_model, estimator, sensor_name, index);
 
     std::string topic_name;

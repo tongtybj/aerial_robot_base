@@ -73,12 +73,12 @@ namespace sensor_plugin
     SensorBase::initialize(node, robot_model, estimator, sensor_name, index);
 
     std::string topic_name;
-    getParam<std::string>("mocap_sub_name", topic_name, std::string("pose"));
+    getParam<std::string>("mocap_sub_name", topic_name, std::string("mocap/pose"));
     msg_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>
       (topic_name, rclcpp::SystemDefaultsQoS(),
        std::bind(&Mocap::poseCallback, this, std::placeholders::_1));
 
-    topic_name = sensor_name + "/" + std::to_string(index) + "/states";
+    topic_name = sensor_name + std::to_string(index) + "/states";
     state_pub_ = node_->create_publisher<aerial_robot_msgs::msg::States>
       (topic_name, rclcpp::SystemDefaultsQoS());
 
@@ -154,7 +154,7 @@ namespace sensor_plugin
     estimator_->setBasePosStateStatus(State::Y, EXPERIMENT_ESTIMATE, true);
     estimator_->setBasePosStateStatus(State::Z, EXPERIMENT_ESTIMATE, true);
 
-    for(auto& fuser : estimator_->getFuserMap(EXPERIMENT_ESTIMATE))
+    for(auto& fuser : estimator_->getFuserList(EXPERIMENT_ESTIMATE))
       {
         string plugin_name = fuser.first;
         FuserPtr kf = fuser.second;
@@ -213,7 +213,7 @@ namespace sensor_plugin
     bool flag = estimate_mode_ & (1 << EXPERIMENT_ESTIMATE);
     if(!flag) return;
 
-    for(auto& fuser : estimator_->getFuserMap(EXPERIMENT_ESTIMATE)) {
+    for(auto& fuser : estimator_->getFuserList(EXPERIMENT_ESTIMATE)) {
 
       string plugin_name = fuser.first;
       FuserPtr  kf = fuser.second;

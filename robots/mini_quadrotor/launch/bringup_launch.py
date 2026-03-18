@@ -133,6 +133,13 @@ def generate_launch_description():
         )
     }
 
+    # --- state estimation parameter  ---
+    state_estimation_file = PathJoinSubstitution([
+        FindPackageShare(robot_model_pkg),
+        'config',
+        'StateEstimation.yaml',
+    ])
+
     # --- rviz config path ---
     rviz_config = PathJoinSubstitution([
         FindPackageShare(robot_model_pkg),
@@ -146,9 +153,12 @@ def generate_launch_description():
         executable='aerial_robot_core_node',
         name='aerial_robot_core',
         namespace=robot_ns,
+        prefix=['gdb -ex run --args'],
         parameters=[{'use_sim_time': sim,
                      'main_rate': 40.0},
-                    robot_description, robot_model_plugin_name],
+                    robot_description,
+                    robot_model_plugin_name,
+                    state_estimation_file],
         output = 'screen'
     )
 
