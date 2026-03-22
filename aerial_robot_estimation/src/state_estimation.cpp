@@ -501,46 +501,67 @@ void StateEstimator::setCogAngularVel(int estimate_mode, KDL::Vector omega) {
   cog_twist_.at(estimate_mode).rot = omega;
 }
 
-void StateEstimator::setBaseOrientationWxB(int estimate_mode, KDL::Vector v) {
-  KDL::Vector wx_b = v;
-  wx_b.Normalize();
+void StateEstimator::setBaseOrientationPhi(int estimate_mode, KDL::Rotation rot) {
+  // KDL::Vector wx_b = v;
+
+  // KDL::Rotation rot_inv = getBaseOrientation(estimate_mode).Inverse();
+  // KDL::Vector wz_b = rot_inv.UnitZ();
+  // KDL::Vector wy_b = wz_b * wx_b;
+  // wy_b.Normalize();
+
+  // wx_b = wy_b * wz_b;
+  // wx_b.Normalize();
+
+  // rot_inv.UnitX(wx_b);
+  // rot_inv.UnitY(wy_b);
+  // rot_inv.UnitZ(wz_b);
+
+  // setBaseOrientation(estimate_mode, rot_inv.Inverse());
 
   KDL::Rotation rot_inv = getBaseOrientation(estimate_mode).Inverse();
   KDL::Vector wz_b = rot_inv.UnitZ();
-  KDL::Vector wy_b = wz_b * wx_b;
-  wy_b.Normalize();
 
-  rot_inv.UnitX(wx_b);
-  rot_inv.UnitY(wy_b);
-  rot_inv.UnitZ(wz_b);
-
-  setBaseOrientation(estimate_mode, rot_inv.Inverse());
+  KDL::Rotation rot_new = updateCoordinate(rot, wz_b);
+  setBaseOrientation(estimate_mode, rot_new);
 }
 
 void StateEstimator::setBaseOrientationWzB(int estimate_mode, KDL::Vector v) {
+  // KDL::Vector wz_b = v;
+  // wz_b.Normalize();
+
+  // KDL::Rotation rot_inv = getBaseOrientation(estimate_mode).Inverse();
+  // KDL::Vector wx_b = rot_inv.UnitX();
+  // KDL::Vector wy_b = wz_b * wx_b;
+  // wy_b.Normalize();
+
+  // wx_b = wy_b * wz_b;
+  // wx_b.Normalize();
+
+  // rot_inv.UnitX(wx_b);
+  // rot_inv.UnitY(wy_b);
+  // rot_inv.UnitZ(wz_b);
+
+  // setBaseOrientation(estimate_mode, rot_inv.Inverse());
+
   KDL::Vector wz_b = v;
   wz_b.Normalize();
 
-  KDL::Rotation rot_inv = getBaseOrientation(estimate_mode).Inverse();
-  KDL::Vector wx_b = rot_inv.UnitX();
-  KDL::Vector wy_b = wz_b * wx_b;
-  wy_b.Normalize();
+  KDL::Rotation rot = getBaseOrientation(estimate_mode);
 
-  rot_inv.UnitX(wx_b);
-  rot_inv.UnitY(wy_b);
-  rot_inv.UnitZ(wz_b);
-
-  setBaseOrientation(estimate_mode, rot_inv.Inverse());
+  KDL::Rotation rot_new = updateCoordinate(rot, wz_b);
+  setBaseOrientation(estimate_mode, rot_new);
 }
 
 void StateEstimator::setCogOrientationWxB(int estimate_mode, KDL::Vector v) {
   KDL::Vector wx_c = v;
-  wx_c.Normalize();
 
   KDL::Rotation rot_inv = getCogOrientation(estimate_mode).Inverse();
   KDL::Vector wz_c = rot_inv.UnitZ();
   KDL::Vector wy_c = wz_c * wx_c;
   wy_c.Normalize();
+
+  wx_c = wy_c * wz_c;
+  wx_c.Normalize();
 
   rot_inv.UnitX(wx_c);
   rot_inv.UnitY(wy_c);
@@ -558,11 +579,55 @@ void StateEstimator::setCogOrientationWzB(int estimate_mode, KDL::Vector v) {
   KDL::Vector wy_c = wz_c * wx_c;
   wy_c.Normalize();
 
+  wx_c = wy_c * wz_c;
+  wx_c.Normalize();
+
   rot_inv.UnitX(wx_c);
   rot_inv.UnitY(wy_c);
   rot_inv.UnitZ(wz_c);
 
   setCogOrientation(estimate_mode, rot_inv.Inverse());
+}
+
+KDL::Rotation StateEstimator::updateCoordinate(KDL::Rotation rot, KDL::Vector c3_new)
+{
+  const KDL::Vector c1 = rot.Inverse().UnitX();
+  const KDL::Vector c3 = rot.Inverse().UnitZ();
+
+  KDL::Vector ref_axis;
+  if (std::abs(c3_new.z()) > 0.9) {
+    ref_axis = KDL::Vector(1,0,0);
+  } else {
+    ref_axis = KDL::Vector(0,0,1);
+  }
+
+  // u = normalize(ref_axis x c3)
+  KDL::Vector u = ref_axis * c3;
+  u.Normalize();
+
+  // v = c3 x u  so that u x v = c3
+  KDL::Vector v = c3 * u;
+  v.Normalize();
+
+  // c1 = u cos(phi) + v sin(phi)
+  double cos_phi = KDL::dot(u, c1);
+  double sin_phi = KDL::dot(v, c1);
+
+  double phi = atan2(sin_phi, cos_phi);
+
+  // reconstruct rotation matrix
+  u = ref_axis * c3_new;
+  u.Normalize();
+  v = c3_new * u;
+  v.Normalize();
+
+  // c1 = u cos(phi) + v sin(phi)
+  // c2 = -u sin(phi) + v cos(phi)
+  KDL::Vector c1_new = u * cos(phi) + v * sin(phi);
+  KDL::Vector c2_new = u * (-sin(phi)) + v * cos(phi);
+
+  KDL::Rotation rot_new(c1_new, c2_new, c3_new);
+  return rot_new.Inverse();
 }
 
 void StateEstimator::updateBaseQueue(const double timestamp, const KDL::Rotation r_ee, const KDL::Rotation r_ex, const KDL::Vector omega) {

@@ -148,11 +148,11 @@ namespace aerial_robot_estimation {
     const KDL::Vector getCogAngularVel(int estimate_mode);
     void setCogAngularVel(int estimate_mode, KDL::Vector omega);
 
-    void setBaseOrientationWxB(int estimate_mode, KDL::Vector v);
+    void setBaseOrientationPhi(int estimate_mode, KDL::Rotation rot);
     void setBaseOrientationWzB(int estimate_mode, KDL::Vector v);
     void setCogOrientationWxB(int estimate_mode, KDL::Vector v);
     void setCogOrientationWzB(int estimate_mode, KDL::Vector v);
-
+    KDL::Rotation updateCoordinate(KDL::Rotation rot, KDL::Vector c3_new);
 
     inline void setBaseQueueSize(const int& qu_size) {qu_size_ = qu_size;}
     void updateBaseQueue(const double timestamp, const KDL::Rotation r_ee, const KDL::Rotation r_ex, const KDL::Vector omega);
